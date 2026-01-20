@@ -21,9 +21,7 @@ MODEL_DIR = "models"
 conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 cursor = conn.cursor()
 
-# NOTE: Database schema is technically "Legacy" (has 30 q columns). 
-# We will just insert 0 for the missing sleep columns to keep DB compatible 
-# without complex migration scripts.
+# 1. Create table with BASIC columns if it doesn't exist
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS responses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,6 +35,16 @@ CREATE TABLE IF NOT EXISTS responses (
     submitted_at TEXT
 )
 """)
+
+# 2. SCHEMA MIGRATION: Add result columns if they don't exist yet
+# We try to add them; if they exist, we ignore the error.
+result_columns = ["res_ADHD", "res_ASD", "res_SPCD", "res_DEP", "res_ANX"]
+for col in result_columns:
+    try:
+        cursor.execute(f"ALTER TABLE responses ADD COLUMN {col} TEXT")
+    except sqlite3.OperationalError:
+        pass # Column likely already exists
+
 conn.commit()
 
 # ----------------------------
@@ -152,9 +160,53 @@ def create_pdf(student_data, results, questions, user_choices):
 # ----------------------------
 with st.sidebar:
     st.header("Admin / Instructor")
-    if st.checkbox("Show Stored Data"):
-        df_hist = pd.read_sql_query("SELECT * FROM responses", conn)
-        st.dataframe(df_hist)
+    
+    # Initialize session state variable if it doesn't exist
+    if 'admin_logged_in' not in st.session_state:
+        st.session_state['admin_logged_in'] = False
+
+    # 1. If NOT logged in, show the login form
+    if not st.session_state['admin_logged_in']:
+        if st.checkbox("Access Admin Panel"):
+            with st.form("login_form"):
+                user = st.text_input("Username")
+                pwd = st.text_input("Password", type="password")
+                submit_login = st.form_submit_button("Login")
+            
+            if submit_login:
+                # CHANGE CREDENTIALS HERE
+                if user == "admin" and pwd == "IAmTheAdmin123":
+                    st.session_state['admin_logged_in'] = True
+                    st.rerun() # Refresh to show the data
+                else:
+                    st.error("❌ Invalid Username or Password")
+
+    # 2. If LOGGED IN, show the data and a logout button
+    else:
+        st.success("✅ Admin Access Granted")
+        
+        if st.button("Logout"):
+            st.session_state['admin_logged_in'] = False
+            st.rerun()
+            
+        st.divider()
+        st.subheader("Stored Responses")
+        
+        # Load data
+        try:
+            df_hist = pd.read_sql_query("SELECT * FROM responses", conn)
+            st.dataframe(df_hist)
+            
+            # Optional: Download button for the CSV
+            csv = df_hist.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                "Download Database as CSV",
+                csv,
+                "responses_backup.csv",
+                "text/csv"
+            )
+        except Exception as e:
+            st.error(f"Error loading database: {e}")
 
 # ----------------------------
 # MAIN UI
@@ -215,29 +267,10 @@ if submitted:
     if not grade or not gender:
         st.error("Please fill in Grade and Gender fields.")
         st.stop()
-
-    submitted_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    # DB Compat: Pad with 3 zeros for the removed Sleep questions
-    db_responses = responses + [0, 0, 0] 
-    values = [grade, age, gender] + db_responses + [submitted_at]
+    # --- PREDICTION LOGIC STARTS HERE ---
     
-    cursor.execute("""
-    INSERT INTO responses (
-        grade, age, gender,
-        q1, q2, q3, q4, q5, q6, q7, q8, q9, q10,
-        q11, q12, q13, q14, q15, q16, q17, q18, q19, q20,
-        q21, q22, q23, q24, q25, q26, q27, q28, q29, q30,
-        submitted_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, values)
-    conn.commit()
-    st.success("Responses saved successfully.")
-
-    st.divider()
-    st.subheader("Results Analysis")
-    
-    # 27 Feature Names
+    # 1. Prepare Features
     feature_names = []
     feature_names += [f"ADHD_Q{i}" for i in range(1, 8)]
     feature_names += [f"ASD_Q{i}" for i in range(1, 7)]
@@ -247,27 +280,36 @@ if submitted:
     
     X_df = pd.DataFrame([responses], columns=feature_names)
     
-    # Prediction
+    # 2. Run Risk Model
     risk_preds_array = rf_risk.predict(X_df)[0] 
     risk_results_map = {RISK_ORDER[i]: risk_preds_array[i] for i in range(len(RISK_ORDER))}
     
-    # Hierarchy
+    # 3. Apply Hierarchy Rule
     if risk_results_map["ASD"] == 1 and risk_results_map["SPCD"] == 1:
         risk_results_map["SPCD"] = 0
 
-    # Display
+    # 4. Determine Severity & Display Results
+    st.divider()
+    st.subheader("Results Analysis")
+
     any_risk_found = False
     final_report_results = {} 
     
-    col1, col2 = st.columns(2)
+    # We create a map to store what goes into the DB (Default is "Negative")
+    db_result_values = {d: "Negative" for d in RISK_ORDER}
+
     for disorder, is_risk in risk_results_map.items():
         if is_risk == 1:
             any_risk_found = True
             sev_model = severity_models[disorder]
             sev_pred_idx = sev_model.predict(X_df)[0] 
             sev_label = SEVERITY_DECODER.get(sev_pred_idx, "Unknown")
-            final_report_results[disorder] = sev_label
             
+            # Save for PDF and DB
+            final_report_results[disorder] = sev_label
+            db_result_values[disorder] = sev_label # Updates "Negative" to "High/Med/Low"
+            
+            # Display
             color = "red" if sev_label == "High" else "orange" if sev_label == "Medium" else "blue"
             st.markdown(f"### :warning: **{disorder}** Detected")
             st.markdown(f"Severity Level: <span style='color:{color}; font-weight:bold'>{sev_label}</span>", unsafe_allow_html=True)
@@ -277,6 +319,36 @@ if submitted:
         st.success("✅ No significant cognitive disorder risk detected based on provided responses.")
         st.balloons()
 
+    # --- SAVE TO DATABASE (Moved to End) ---
+    
+    submitted_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # DB Compat: Pad with 3 zeros for the removed Sleep questions
+    db_responses = responses + [0, 0, 0] 
+    
+    # Create the list of results in the specific order of columns
+    results_to_save = [db_result_values["ADHD"], db_result_values["ASD"], 
+                       db_result_values["SPCD"], db_result_values["DEP"], 
+                       db_result_values["ANX"]]
+
+    # Construct the full value list
+    values = [grade, age, gender] + db_responses + results_to_save + [submitted_at]
+    
+    cursor.execute("""
+    INSERT INTO responses (
+        grade, age, gender,
+        q1, q2, q3, q4, q5, q6, q7, q8, q9, q10,
+        q11, q12, q13, q14, q15, q16, q17, q18, q19, q20,
+        q21, q22, q23, q24, q25, q26, q27, q28, q29, q30,
+        res_ADHD, res_ASD, res_SPCD, res_DEP, res_ANX,
+        submitted_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, values)
+    conn.commit()
+    # Note: Using success toast or small text to not distract from results
+    st.toast("Data and Results saved to database.")
+
+    # --- PDF GENERATION ---
     st.write("### 📄 Download Your Record")
     student_profile = {"grade": grade, "age": age, "gender": gender}
     pdf_bytes = create_pdf(student_profile, final_report_results, questions, user_text_answers)
