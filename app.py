@@ -8,6 +8,130 @@ import os
 from fpdf import FPDF
 
 # ----------------------------
+# TRANSLATIONS
+# ----------------------------
+translations = {
+    "English": {
+        "title": "Cognitive Disorder Screening Tool",
+        "caption": "Developed for MMIT by Dr Monika, Sankalp and Team",
+        "warning": "⚠️ **Academic Use Only • Not a Diagnostic Tool**",
+        "grade_label": "Grade / Year of Study",
+        "age_label": "Age",
+        "gender_label": "Gender",
+        "submit_btn": "Submit Screening",
+        "options": {"Never": 0, "Rarely": 1, "Sometimes": 2, "Often": 3, "Very Often": 4},
+        "questions": [
+            "I have difficulty starting tasks that require a lot of thinking.",
+            "I lose focus during lectures, meetings, or reading.",
+            "I forget deadlines or appointments even when they are important.",
+            "I struggle to organize my work or study materials.",
+            "I postpone until the last moment, even for important tasks.",
+            "I feel mentally restless or unable to slow my thoughts.",
+            "I make careless mistakes even when I know the material.",
+            "I find it hard to know when it is my turn to speak in conversations.",
+            "I struggle to understand jokes, sarcasm, or indirect hints.",
+            "I feel unsure how much detail to give when explaining something.",
+            "I find group discussions confusing or exhausting.",
+            "I prefer clear rules and predictable routines.",
+            "I miss social cues like tone of voice or facial expressions.",
+            "People tell me I sound blunt, awkward, or unclear when I speak.",
+            "I struggle to adjust how I speak depending on who I am talking to.",
+            "I find it difficult to stay on topic in conversations.",
+            "I misunderstand what others expect from me socially.",
+            "I feel little interest or pleasure in doing things.",
+            "I feel down, hopeless, or emotionally numb.",
+            "I feel tired or low on energy most days.",
+            "I feel like I am not good enough or have failed.",
+            "I have difficulty concentrating because of low mood.",
+            "I feel nervous, anxious, or on edge.",
+            "I worry too much about academic or social situations.",
+            "I find it hard to relax, even when I have time.",
+            "My anxiety interferes with my studies or relationships.",
+            "I avoid situations because they make me anxious."
+        ]
+    },
+    "Hindi": {
+        "title": "संज्ञानात्मक विकार स्क्रीनिंग टूल",
+        "caption": "डॉ मोनिका, संकल्प और टीम द्वारा MMIT के लिए विकसित",
+        "warning": "⚠️ **केवल शैक्षणिक उपयोग के लिए • यह नैदानिक उपकरण नहीं है**",
+        "grade_label": "ग्रेड / अध्ययन का वर्ष",
+        "age_label": "आयु",
+        "gender_label": "लिंग",
+        "submit_btn": "स्क्रीनिंग जमा करें",
+        "options": {"कभी नहीं": 0, "दुर्लभ": 1, "कभी-कभी": 2, "अक्सर": 3, "हमेशा": 4},
+        "questions": [
+            "मुझे उन कार्यों को शुरू करने में कठिनाई होती है जिनमें बहुत अधिक सोचने की आवश्यकता होती है।",
+            "मैं व्याख्यान, बैठकों या पढ़ने के दौरान ध्यान खो देता हूँ।",
+            "मैं समय सीमा या नियुक्तियों को भूल जाता हूँ, भले ही वे महत्वपूर्ण हों।",
+            "मुझे अपने काम या अध्ययन सामग्री को व्यवस्थित करने में संघर्ष करना पड़ता है।",
+            "मैं महत्वपूर्ण कार्यों के लिए भी अंतिम क्षण तक टालमटोल करता हूँ।",
+            "मैं मानसिक रूप से बेचैन महसूस करता हूँ या अपने विचारों को धीमा करने में असमर्थ हूँ।",
+            "विषय जानने के बावजूद मैं लापरवाह गलतियाँ करता हूँ।",
+            "बातचीत में अपनी बारी का इंतज़ार करना मुझे मुश्किल लगता है।",
+            "मुझे चुटकुले, कटाक्ष या अप्रत्यक्ष संकेतों को समझने में संघर्ष करना पड़ता है।",
+            "किसी चीज़ को समझाते समय मैं अनिश्चित रहता हूँ कि कितनी जानकारी देनी है।",
+            "मुझे समूह चर्चाएँ भ्रमित करने वाली या थका देने वाली लगती हैं।",
+            "मैं स्पष्ट नियमों और अनुमानित दिनचर्या को प्राथमिकता देता हूँ।",
+            "मैं सामाजिक संकेतों जैसे आवाज के लहजे या चेहरे के भावों को नहीं समझ पाता।",
+            "लोग मुझसे कहते हैं कि जब मैं बोलता हूँ तो मैं रूखा, अजीब या अस्पष्ट लगता हूँ।",
+            "मैं जिससे बात कर रहा हूँ उसके अनुसार अपनी बात करने के तरीके को बदलने में संघर्ष करता हूँ।",
+            "मुझे बातचीत में विषय पर टिके रहना मुश्किल लगता है।",
+            "मैं गलत समझता हूँ कि दूसरे मुझसे सामाजिक रूप से क्या उम्मीद करते हैं।",
+            "मुझे चीजें करने में बहुत कम रुचि या आनंद महसूस होता है।",
+            "मैं उदास, निराश या भावनात्मक रूप से सुन्न महसूस करता हूँ।",
+            "मैं अधिकांश दिनों में थका हुआ या कम ऊर्जा महसूस करता हूँ।",
+            "मुझे लगता है कि मैं काफी अच्छा नहीं हूँ या असफल रहा हूँ।",
+            "खराब मूड के कारण मुझे ध्यान केंद्रित करने में कठिनाई होती है।",
+            "मैं घबराहट, चिंतित या बेचैन महसूस करता हूँ।",
+            "मैं शैक्षणिक या सामाजिक स्थितियों के बारे में बहुत अधिक चिंता करता हूँ।",
+            "समय होने पर भी मुझे आराम करना मुश्किल लगता है।",
+            "मेरी चिंता मेरी पढ़ाई या रिश्तों में बाधा डालती है।",
+            "मैं उन स्थितियों से बचता हूँ जो मुझे चिंतित करती हैं।"
+        ]
+    },
+    "Marathi": {
+        "title": "संज्ञानात्मक विकार स्क्रीनिंग साधन",
+        "caption": "डॉ. मोनिका, संकल्प आणि टीम द्वारे MMIT साठी विकसित",
+        "warning": "⚠️ **केवळ शैक्षणिक वापरासाठी • हे निदानात्मक साधन नाही**",
+        "grade_label": "इयत्ता / अभ्यासाचे वर्ष",
+        "age_label": "वय",
+        "gender_label": "लिंग",
+        "submit_btn": "स्क्रीनिंग सबमिट करा",
+        "options": {"कधीच नाही": 0, "कधीतरी": 1, "काही वेळा": 2, "बऱ्याचदा": 3, "नेहमी": 4},
+        "questions": [
+            "मला खूप विचार करावा लागणारी कामे सुरू करण्यात अडचण येते.",
+            "व्याख्याने, मीटिंग किंवा वाचनादरम्यान माझे लक्ष विचलित होते.",
+            "महत्त्वाचे असूनही मी डेडलाईन्स किंवा भेटीच्या वेळा विसरतो.",
+            "मला माझे काम किंवा अभ्यासाचे साहित्य व्यवस्थित करण्यात अडचण येते.",
+            "महत्त्वाच्या कामांसाठीही मी शेवटच्या क्षणापर्यंत टाळाटाळ करतो.",
+            "मला मानसिक अस्वस्थता जाणवते किंवा माझे विचार थांबवणे कठीण जाते.",
+            "माहिती असूनही मी निष्काळजीपणाने चुका करतो.",
+            "संभाषणामध्ये माझी बोलण्याची वेळ कधी आहे हे ओळखणे मला कठीण जाते.",
+            "मला विनोद, उपहास किंवा अप्रत्यक्ष संकेत समजून घेताना अडचण येते.",
+            "एखादी गोष्ट स्पष्ट करताना किती माहिती द्यायची याबद्दल मला खात्री नसते.",
+            "मला गटचर्चा गोंधळात टाकणाऱ्या किंवा थकवणाऱ्या वाटतात.",
+            "मला स्पष्ट नियम आणि ठराविक दिनचर्या आवडते.",
+            "मी आवाजातील चढ-उतार किंवा चेहऱ्यावरील हावभाव यांसारखे सामाजिक संकेत ओळखू शकत नाही.",
+            "लोक मला सांगतात की मी बोलताना स्पष्टवक्ता, अवघडलेला किंवा अस्पष्ट वाटतो.",
+            "मी कोणाशी बोलत आहे त्यानुसार बोलण्याची पद्धत बदलण्यात मला अडचण येते.",
+            "मला संभाषणात विषयावर टिकून राहणे कठीण जाते.",
+            "दुसऱ्यांच्या माझ्याकडून असलेल्या सामाजिक अपेक्षा समजण्यात माझी चूक होते.",
+            "मला गोष्टी करण्यात फारसा रस किंवा आनंद वाटत नाही.",
+            "मला उदास, निराश किंवा भावशून्य वाटते.",
+            "मला बहुतेक दिवस थकवा किंवा कमी ऊर्जा जाणवते.",
+            "मला वाटते की मी पुरेसा चांगला नाही किंवा मी अपयशी ठरलो आहे.",
+            "खराब मूडमुळे मला लक्ष केंद्रित करण्यात अडचण येते.",
+            "मला भीती, चिंता किंवा अस्वस्थता वाटते.",
+            "मी शैक्षणिक किंवा सामाजिक परिस्थितीबद्दल खूप चिंता करतो.",
+            "वेळ असूनही मला आराम करणे कठीण जाते.",
+            "माझ्या चिंतेचा परिणाम माझ्या अभ्यासावर किंवा नातेसंबंधांवर होतो.",
+            "ज्या परिस्थितीमुळे मला चिंता वाटते अशा गोष्टी मी टाळतो."
+        ]
+    }
+}
+
+
+# ----------------------------
 # CONFIG
 # ----------------------------
 st.set_page_config(page_title="Cognitive Disorder Screening", layout="centered")
@@ -211,66 +335,53 @@ with st.sidebar:
 # ----------------------------
 # MAIN UI
 # ----------------------------
-st.title("Cognitive Disorder Screening Tool")
-st.caption("Developed for MMIT by Dr Monika, Sankalp and Team")
-st.warning("⚠️ **Academic Use Only • Not a Diagnostic Tool**")
 
-grade = st.selectbox("Grade / Year of Study", ["", "UG", "PG", "Higher"])
-age = st.number_input("Age", min_value=18, max_value=60, step=1)
-gender = st.selectbox("Gender", ["", "Male", "Female", "Other"])
+# 1. Language Selection Dropdown (Placed at the very top)
+lang_choice = st.selectbox("🌐 Select Language / भाषा निवडा / भाषा चुनें", ["English", "Hindi", "Marathi"])
+t = translations[lang_choice]
 
-# UPDATED: REMOVED SLEEP QUESTIONS
-questions = [
-    "I have difficulty starting tasks that require a lot of thinking.",
-    "I lose focus during lectures, meetings, or reading.",
-    "I forget deadlines or appointments even when they are important.",
-    "I struggle to organize my work or study materials.",
-    "I postpone until the last moment, even for important tasks.",
-    "I feel mentally restless or unable to slow my thoughts.",
-    "I make careless mistakes even when I know the material.",
-    "I find it hard to know when it is my turn to speak in conversations.",
-    "I struggle to understand jokes, sarcasm, or indirect hints.",
-    "I feel unsure how much detail to give when explaining something.",
-    "I find group discussions confusing or exhausting.",
-    "I prefer clear rules and predictable routines.",
-    "I miss social cues like tone of voice or facial expressions.",
-    "People tell me I sound blunt, awkward, or unclear when I speak.",
-    "I struggle to adjust how I speak depending on who I am talking to.",
-    "I find it difficult to stay on topic in conversations.",
-    "I misunderstand what others expect from me socially.",
-    "I feel little interest or pleasure in doing things.",
-    "I feel down, hopeless, or emotionally numb.",
-    "I feel tired or low on energy most days.",
-    "I feel like I am not good enough or have failed.",
-    "I have difficulty concentrating because of low mood.",
-    "I feel nervous, anxious, or on edge.",
-    "I worry too much about academic or social situations.",
-    "I find it hard to relax, even when I have time.",
-    "My anxiety interferes with my studies or relationships.",
-    "I avoid situations because they make me anxious."
-]
+# 2. Header Section (Translated)
+st.title(t["title"])
+st.caption(t["caption"])
+st.warning(t["warning"])
 
-options = {"Never": 0, "Rarely": 1, "Sometimes": 2, "Often": 3, "Very Often": 4}
+# 3. User Profile Fields (Translated)
+col1, col2, col3 = st.columns(3)
+with col1:
+    grade = st.selectbox(t["grade_label"], ["", "UG", "PG", "Higher"])
+with col2:
+    age = st.number_input(t["age_label"], min_value=18, max_value=60, step=1)
+with col3:
+    gender = st.selectbox(t["gender_label"], ["", "Male", "Female", "Other"])
+
+# 4. Questionnaire Section (Translated)
+questions = t["questions"]
+options_dict = t["options"]
+
 responses = []
 user_text_answers = []
 
 with st.form("questionnaire_form"):
     for i, q in enumerate(questions, start=1):
-        choice = st.radio(f"Q{i}. {q}", list(options.keys()), horizontal=True, key=f"q{i}")
+        # Unique key includes lang_choice to ensure radio buttons reset on language toggle
+        choice = st.radio(f"Q{i}. {q}", list(options_dict.keys()), horizontal=True, key=f"q{i}_{lang_choice}")
         user_text_answers.append(choice)
-        score = options[choice]
+        
+        # We always store the numeric score (0-4) regardless of the language shown
+        score = options_dict[choice]
         responses.append(score)
     
-    submitted = st.form_submit_button("Submit Screening")
+    submitted = st.form_submit_button(t["submit_btn"])
 
+# ----------------------------
+# PROCESSING SUBMISSION
+# ----------------------------
 if submitted:
     if not grade or not gender:
         st.error("Please fill in Grade and Gender fields.")
         st.stop()
     
-    # --- PREDICTION LOGIC STARTS HERE ---
-    
-    # 1. Prepare Features
+    # 1. Prepare Features for Prediction
     feature_names = []
     feature_names += [f"ADHD_Q{i}" for i in range(1, 8)]
     feature_names += [f"ASD_Q{i}" for i in range(1, 7)]
@@ -294,8 +405,6 @@ if submitted:
 
     any_risk_found = False
     final_report_results = {} 
-    
-    # We create a map to store what goes into the DB (Default is "Negative")
     db_result_values = {d: "Negative" for d in RISK_ORDER}
 
     for disorder, is_risk in risk_results_map.items():
@@ -305,33 +414,25 @@ if submitted:
             sev_pred_idx = sev_model.predict(X_df)[0] 
             sev_label = SEVERITY_DECODER.get(sev_pred_idx, "Unknown")
             
-            # Save for PDF and DB
             final_report_results[disorder] = sev_label
-            db_result_values[disorder] = sev_label # Updates "Negative" to "High/Med/Low"
+            db_result_values[disorder] = sev_label 
             
-            # Display
             color = "red" if sev_label == "High" else "orange" if sev_label == "Medium" else "blue"
             st.markdown(f"### :warning: **{disorder}** Detected")
             st.markdown(f"Severity Level: <span style='color:{color}; font-weight:bold'>{sev_label}</span>", unsafe_allow_html=True)
             st.write("---")
 
     if not any_risk_found:
-        st.success("✅ No significant cognitive disorder risk detected based on provided responses.")
+        st.success("✅ No significant cognitive disorder risk detected.")
         st.balloons()
 
-    # --- SAVE TO DATABASE (Moved to End) ---
-    
+    # 5. Save to Database
     submitted_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    # DB Compat: Pad with 3 zeros for the removed Sleep questions
-    db_responses = responses + [0, 0, 0] 
-    
-    # Create the list of results in the specific order of columns
+    db_responses = responses + [0, 0, 0] # Pad for DB schema
     results_to_save = [db_result_values["ADHD"], db_result_values["ASD"], 
                        db_result_values["SPCD"], db_result_values["DEP"], 
                        db_result_values["ANX"]]
 
-    # Construct the full value list
     values = [grade, age, gender] + db_responses + results_to_save + [submitted_at]
     
     cursor.execute("""
@@ -342,14 +443,15 @@ if submitted:
         q21, q22, q23, q24, q25, q26, q27, q28, q29, q30,
         res_ADHD, res_ASD, res_SPCD, res_DEP, res_ANX,
         submitted_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     """, values)
     conn.commit()
-    # Note: Using success toast or small text to not distract from results
-    st.toast("Data and Results saved to database.")
+    st.toast("Data saved successfully.")
 
-    # --- PDF GENERATION ---
+    # 6. PDF Generation (English Only Recommendation)
     st.write("### 📄 Download Your Record")
     student_profile = {"grade": grade, "age": age, "gender": gender}
+    # Note: user_text_answers contains the translated label (e.g., 'कभी-कभी')
+    # If the PDF font doesn't support Hindi, this might error. 
     pdf_bytes = create_pdf(student_profile, final_report_results, questions, user_text_answers)
     st.download_button("Download Report (PDF)", pdf_bytes, "Screening_Report.pdf", "application/pdf")
